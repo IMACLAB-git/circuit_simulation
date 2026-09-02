@@ -15,6 +15,29 @@ npm run build    # dist/ 로 정적 빌드
 
 ## 배포
 
+**공개 주소 → https://imaclab-git.github.io/circuit_simulation/**
+
+`main`에 푸시하면 GitHub Actions가 검증(`npm run check`)까지 돌린 뒤 자동 배포합니다.
+검증이 깨지면 배포도 멈춥니다.
+
+수업 페이지에 끼워 넣으려면:
+
+```html
+<iframe src="https://imaclab-git.github.io/circuit_simulation/#ex=rc-lowpass"
+        style="width:100%;height:720px;border:1px solid #ccd;border-radius:10px"
+        title="회로랩" allow="fullscreen" loading="lazy"></iframe>
+```
+
+`#ex=<id>`로 특정 예제를 바로 열 수 있고, 페이지를 새로 고치지 않고 해시만 바꿔도 회로가
+전환되므로 예제별 링크를 나란히 걸 수 있습니다. id는 `led-blinker`, `rc-lowpass`, `rlc`,
+`rectifier`, `noninv-amp`, `common-emitter`. iframe이 좁으면 툴바의 **⤢ 전체화면**으로 키우면
+됩니다.
+
+오프라인 실습용 단일 파일은 https://imaclab-git.github.io/circuit_simulation/circuit-lab.html
+에서 내려받아 그대로 나눠 주면 됩니다.
+
+### 직접 호스팅할 때
+
 백엔드가 없어서 정적 파일만 올리면 끝입니다. 자산 경로는 상대 경로(`base: './'`)라
 루트든 하위 폴더든 그대로 돕니다.
 
