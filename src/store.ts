@@ -325,15 +325,27 @@ export function snapTargets(sch: Schematic): Set<string> {
   return s;
 }
 
+/** The example named by `#ex=<id>` in the URL, if it is one we have. */
+function exampleFromUrl(): string | null {
+  const id = /[#&?]ex=([\w-]+)/.exec(location.hash + location.search)?.[1];
+  return id && EXAMPLES.some((e) => e.id === id) ? id : null;
+}
+
 /**
  * Restores the last session, falling back to the LED blinker demo.
  *
- * `#ex=<id>` in the URL overrides both, which makes a particular demo
- * linkable and gives the screenshot tooling a way in.
+ * `#ex=<id>` in the URL overrides both, so a course page can link straight to
+ * a particular demo. Later hash changes are followed too: a link between
+ * examples on the host page changes only the fragment, which never reloads.
  */
 export function boot(): void {
-  const wanted = /[#&?]ex=([\w-]+)/.exec(location.hash + location.search)?.[1];
-  if (wanted && EXAMPLES.some((e) => e.id === wanted)) {
+  window.addEventListener('hashchange', () => {
+    const id = exampleFromUrl();
+    if (id && id !== state.exampleId) actions.loadExample(id);
+  });
+
+  const wanted = exampleFromUrl();
+  if (wanted) {
     actions.loadExample(wanted);
     runner.running = state.running;
     emit();
