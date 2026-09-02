@@ -24,11 +24,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Turns Pages on for the repository the first time this runs, so there is
-      # no manual settings step before the first deploy.
+      # Reads the repository's Pages configuration. Pages itself is enabled
+      # once in the repo settings (Settings > Pages > Source: GitHub Actions);
+      # the workflow token is not allowed to create the site itself.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - uses: actions/setup-node@v4
         with:
           node-version: 22
