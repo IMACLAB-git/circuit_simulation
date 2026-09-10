@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { EXAMPLES } from '../examples';
+import { LAB } from '../lab';
 import { actions, runner, useStore } from '../store';
 import { formatUnit } from '../util/si';
 
@@ -40,6 +41,20 @@ export default function Toolbar() {
 
   return (
     <header className="toolbar">
+      {/* A new tab, so an embedded copy never swaps itself out for the lab
+          site. The referrer is kept on purpose: it tells the lab where visits
+          came from. */}
+      <a
+        className="lab-logo"
+        href={LAB.url}
+        target="_blank"
+        rel="noopener"
+        title={`${LAB.name} 홈페이지 (새 창)`}
+        aria-label={`${LAB.name} 홈페이지`}
+      >
+        <span className="lab-i" aria-hidden="true" />MaC Lab
+      </a>
+      <div className="sep" />
       <div className="brand">회로<span>랩</span></div>
 
       <button className={st.running ? 'on' : ''} onClick={actions.toggleRun} title="Space">
@@ -119,6 +134,12 @@ export default function Toolbar() {
         onClick={() => { if (window.confirm('회로를 모두 지울까요?')) actions.clearAll(); }}
       >
         새 회로
+      </button>
+      <button
+        onClick={actions.toggleTheme}
+        title={st.theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
+      >
+        {st.theme === 'dark' ? '☀ 라이트' : '☾ 다크'}
       </button>
       <button onClick={toggleFullscreen} title="전체화면 전환">
         {full ? '⤡ 창으로' : '⤢ 전체화면'}

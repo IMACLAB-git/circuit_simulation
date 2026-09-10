@@ -5,6 +5,7 @@ import Palette from './Palette';
 import Scope from './Scope';
 import Toolbar from './Toolbar';
 import { EXAMPLES } from '../examples';
+import { LAB } from '../lab';
 import { runner, useStore } from '../store';
 import { formatUnit } from '../util/si';
 
@@ -29,6 +30,9 @@ function StatusBar() {
       <span>프레임당 <b>{runner.lastSteps}</b> 스텝</span>
       {nc > 0 && <span className="warn">근사 스텝 {nc}회</span>}
       {note && <span style={{ flex: 1, minWidth: 200 }}>{note}</span>}
+      <a className="credit" href={LAB.url} target="_blank" rel="noopener">
+        제작 <b>{LAB.name}</b> ↗
+      </a>
     </footer>
   );
 }

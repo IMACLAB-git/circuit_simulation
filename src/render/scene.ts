@@ -2,20 +2,8 @@ import { COMPONENTS, rotate } from '../model/components';
 import { pinPositions, type Comp, type Schematic, type Wire } from '../model/schematic';
 import { drawSymbol, type SymCtx } from './symbols';
 import { flowRate, type SimRunner } from '../sim/runner';
+import { probeColor, type CanvasTheme } from '../theme';
 import { formatUnit } from '../util/si';
-
-export const THEME = {
-  bg: '#0b1220',
-  grid: '#1b2740',
-  gridStrong: '#243352',
-  body: '#cbd5e1',
-  text: '#94a3b8',
-  textStrong: '#e2e8f0',
-  select: '#facc15',
-  hover: '#38bdf8',
-  wireIdle: '#64748b',
-  dot: '#fef9c3',
-};
 
 /** Pan and zoom. `g` is the on-screen size of one grid cell in pixels. */
 export interface Camera { x: number; y: number; g: number; }
@@ -31,15 +19,8 @@ export const toGrid = (cam: Camera, sx: number, sy: number): [number, number] =>
  * at the most positive. The span is auto-scaled to the circuit so a 3.3 V logic
  * board and a 240 V rectifier both use the full range.
  */
-export function voltageColor(v: number, span: number): string {
+export function voltageColor(v: number, span: number, stops: CanvasTheme['ramp']): string {
   const t = Math.max(-1, Math.min(1, v / Math.max(span, 1e-9)));
-  const stops: [number, number[]][] = [
-    [-1, [37, 99, 235]],
-    [-0.45, [34, 211, 238]],
-    [0, [120, 133, 156]],
-    [0.45, [250, 204, 21]],
-    [1, [239, 68, 68]],
-  ];
   let i = 0;
   while (i < stops.length - 2 && t > stops[i + 1][0]) i++;
   const [t0, c0] = stops[i];
@@ -65,24 +46,25 @@ export interface DrawOpts {
   showVoltage: boolean;
   showCurrent: boolean;
   showLabels: boolean;
+  theme: CanvasTheme;
 }
 
 function drawGrid(ctx: CanvasRenderingContext2D, o: DrawOpts) {
   const { cam, width, height } = o;
-  ctx.fillStyle = THEME.bg;
+  ctx.fillStyle = o.theme.bg;
   ctx.fillRect(0, 0, width, height);
   if (cam.g < 7) return;
   const x0 = Math.floor(-cam.x / cam.g) - 1;
   const y0 = Math.floor(-cam.y / cam.g) - 1;
   const x1 = x0 + Math.ceil(width / cam.g) + 2;
   const y1 = y0 + Math.ceil(height / cam.g) + 2;
-  ctx.fillStyle = THEME.grid;
+  ctx.fillStyle = o.theme.grid;
   const r = cam.g > 16 ? 1.2 : 0.9;
   for (let gx = x0; gx <= x1; gx++) {
     for (let gy = y0; gy <= y1; gy++) {
       const [sx, sy] = toScreen(cam, gx, gy);
       const major = gx % 5 === 0 && gy % 5 === 0;
-      ctx.fillStyle = major ? THEME.gridStrong : THEME.grid;
+      ctx.fillStyle = major ? o.theme.gridStrong : o.theme.grid;
       ctx.beginPath();
       ctx.arc(sx, sy, major ? r + 0.6 : r, 0, Math.PI * 2);
       ctx.fill();
@@ -129,8 +111,8 @@ function drawWires(ctx: CanvasRenderingContext2D, o: DrawOpts, dots: Path2D[]) {
   ctx.lineWidth = Math.max(1.8, cam.g * 0.11);
   sch.wires.forEach((w, i) => {
     const v = runner.voltageAt(w.x1, w.y1);
-    ctx.strokeStyle = o.showVoltage ? voltageColor(v, span) : THEME.wireIdle;
-    if (o.selection.has(w.id)) ctx.strokeStyle = THEME.select;
+    ctx.strokeStyle = o.showVoltage ? voltageColor(v, span, o.theme.ramp) : o.theme.wireIdle;
+    if (o.selection.has(w.id)) ctx.strokeStyle = o.theme.select;
     const [ax, ay] = toScreen(cam, w.x1, w.y1);
     const [bx, by] = toScreen(cam, w.x2, w.y2);
     ctx.beginPath();
@@ -147,14 +129,14 @@ function drawJunctions(ctx: CanvasRenderingContext2D, o: DrawOpts) {
   const net = o.runner.net;
   if (!net) return;
   const span = o.runner.voltageSpan();
-  ctx.fillStyle = THEME.body;
+  ctx.fillStyle = o.theme.body;
   for (let p = 0; p < net.nPoints; p++) {
     if (net.degree[p] < 3) continue;
     const gx = net.pointXY[p * 2], gy = net.pointXY[p * 2 + 1];
     const [sx, sy] = toScreen(o.cam, gx, gy);
     ctx.fillStyle = o.showVoltage
-      ? voltageColor(o.runner.sim.nodeVoltage(net.pointNode[p]), span)
-      : THEME.wireIdle;
+      ? voltageColor(o.runner.sim.nodeVoltage(net.pointNode[p]), span, o.theme.ramp)
+      : o.theme.wireIdle;
     ctx.beginPath();
     ctx.arc(sx, sy, Math.max(2.2, o.cam.g * 0.15), 0, Math.PI * 2);
     ctx.fill();
@@ -168,9 +150,9 @@ function drawComp(ctx: CanvasRenderingContext2D, o: DrawOpts, c: Comp, dots: Pat
   const nodes = runner.net?.pinNodes.get(c.id);
 
   const leadColors = def.pins.map((_, i) => {
-    if (ghost) return 'rgba(148,163,184,0.5)';
-    if (!o.showVoltage || !nodes) return THEME.wireIdle;
-    return voltageColor(runner.sim.nodeVoltage(nodes[i]), span);
+    if (ghost) return o.theme.ghostLead;
+    if (!o.showVoltage || !nodes) return o.theme.wireIdle;
+    return voltageColor(runner.sim.nodeVoltage(nodes[i]), span, o.theme.ramp);
   });
 
   const [sx, sy] = toScreen(cam, c.x, c.y);
@@ -179,12 +161,13 @@ function drawComp(ctx: CanvasRenderingContext2D, o: DrawOpts, c: Comp, dots: Pat
   ctx.rotate((c.rot * Math.PI) / 2);
   const sym: SymCtx = {
     g: cam.g,
-    body: ghost ? 'rgba(203,213,225,0.45)' : o.selection.has(c.id) ? THEME.select
-      : o.hoverComp === c.id ? THEME.hover : THEME.body,
+    body: ghost ? o.theme.ghostBody : o.selection.has(c.id) ? o.theme.select
+      : o.hoverComp === c.id ? o.theme.hover : o.theme.body,
     lead: leadColors,
-    bg: THEME.bg,
+    bg: o.theme.bg,
     params: c.params,
     glow: c.type === 'led' && !ghost ? runner.ledBrightness(c.id) : 0,
+    ledOff: o.theme.ledOff,
   };
   drawSymbol(ctx, c.type, sym);
   ctx.restore();
@@ -241,10 +224,10 @@ function drawLabels(ctx: CanvasRenderingContext2D, o: DrawOpts) {
       sy += 3;
     }
 
-    ctx.fillStyle = o.selection.has(c.id) ? THEME.select : THEME.text;
+    ctx.fillStyle = o.selection.has(c.id) ? o.theme.select : o.theme.text;
     ctx.fillText(c.name, sx, sy);
     if (value) {
-      ctx.fillStyle = THEME.textStrong;
+      ctx.fillStyle = o.theme.textStrong;
       ctx.fillText(value, sx, sy + fs + 1);
     }
   }
@@ -257,22 +240,24 @@ function drawProbes(ctx: CanvasRenderingContext2D, o: DrawOpts) {
   ctx.font = `600 ${fs}px ui-sans-serif, system-ui, sans-serif`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  for (const p of o.runner.probes) {
+  for (let idx = 0; idx < o.runner.probes.length; idx++) {
+    const p = o.runner.probes[idx];
     if (p.kind !== 'v') continue;
+    const colour = probeColor(o.theme, idx);
     const pi = net.pointIndex.get(p.target);
     if (pi === undefined) continue;
     const gx = net.pointXY[pi * 2], gy = net.pointXY[pi * 2 + 1];
     const [sx, sy] = toScreen(o.cam, gx, gy);
-    ctx.fillStyle = p.color;
+    ctx.fillStyle = colour;
     ctx.beginPath();
     ctx.arc(sx, sy, Math.max(3, o.cam.g * 0.2), 0, Math.PI * 2);
     ctx.fill();
     const v = o.runner.sim.nodeVoltage(net.pointNode[pi]);
     const text = formatUnit(v, 'V');
     const tw = ctx.measureText(text).width;
-    ctx.fillStyle = 'rgba(11,18,32,0.85)';
+    ctx.fillStyle = o.theme.probeLabelBg;
     ctx.fillRect(sx + 7, sy - fs * 0.75, tw + 8, fs * 1.5);
-    ctx.fillStyle = p.color;
+    ctx.fillStyle = colour;
     ctx.fillText(text, sx + 11, sy + 1);
   }
 }
@@ -287,7 +272,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
     const { cam } = o;
     const [ax, ay] = toScreen(cam, o.pendingWire.x1, o.pendingWire.y1);
     const [bx, by] = toScreen(cam, o.pendingWire.x2, o.pendingWire.y2);
-    ctx.strokeStyle = THEME.hover;
+    ctx.strokeStyle = o.theme.hover;
     ctx.lineWidth = Math.max(1.8, cam.g * 0.11);
     ctx.setLineDash([5, 4]);
     ctx.beginPath();
@@ -302,11 +287,11 @@ export function drawScene(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
 
   if (o.showCurrent) {
     const alpha = [0.4, 0.72, 1];
-    ctx.shadowColor = 'rgba(254,249,195,0.55)';
+    ctx.shadowColor = o.theme.dotHalo;
     for (let b = 0; b < DOT_BUCKETS; b++) {
       ctx.globalAlpha = alpha[b];
       ctx.shadowBlur = b === DOT_BUCKETS - 1 ? Math.max(2, o.cam.g * 0.18) : 0;
-      ctx.fillStyle = THEME.dot;
+      ctx.fillStyle = o.theme.dot;
       ctx.fill(dots[b]);
     }
     ctx.globalAlpha = 1;
@@ -322,7 +307,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, o: DrawOpts): void {
 
   if (o.hoverPoint) {
     const [sx, sy] = toScreen(o.cam, o.hoverPoint[0], o.hoverPoint[1]);
-    ctx.strokeStyle = THEME.hover;
+    ctx.strokeStyle = o.theme.hover;
     ctx.lineWidth = 1.6;
     ctx.beginPath();
     ctx.arc(sx, sy, Math.max(4, o.cam.g * 0.24), 0, Math.PI * 2);

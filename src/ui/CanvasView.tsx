@@ -5,6 +5,7 @@ import {
 import { COMPONENTS } from '../model/components';
 import { pinPositions } from '../model/schematic';
 import { actions, getState, runner, useStore } from '../store';
+import { THEMES } from '../theme';
 
 type Drag =
   | { mode: 'none' }
@@ -102,13 +103,14 @@ export default function CanvasView() {
         showVoltage: s.showVoltage,
         showCurrent: s.showCurrent,
         showLabels: s.showLabels,
+        theme: THEMES[s.theme],
       });
 
       if (d.mode === 'marquee') {
         const [ax, ay] = toScreen(cam.current, d.x1, d.y1);
         const [bx, by] = toScreen(cam.current, d.x2, d.y2);
-        ctx.fillStyle = 'rgba(56,189,248,0.12)';
-        ctx.strokeStyle = 'rgba(56,189,248,0.8)';
+        ctx.fillStyle = THEMES[s.theme].marqueeFill;
+        ctx.strokeStyle = THEMES[s.theme].marqueeStroke;
         ctx.lineWidth = 1;
         ctx.fillRect(ax, ay, bx - ax, by - ay);
         ctx.strokeRect(ax + 0.5, ay + 0.5, bx - ax, by - ay);

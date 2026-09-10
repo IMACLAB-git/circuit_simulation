@@ -19,6 +19,8 @@ export interface SymCtx {
   params: Record<string, number>;
   /** 0..1 drive level, used by the LED. */
   glow: number;
+  /** HSL lightness for an unlit LED, so it reads as dark on either theme. */
+  ledOff: number;
 }
 
 type Painter = (ctx: CanvasRenderingContext2D, s: SymCtx) => void;
@@ -209,7 +211,7 @@ const painters: Record<CompType, Painter> = {
     // rather than as a bright white triangle.
     ctx.fillStyle = s.glow > 0.02
       ? `hsl(${hue}, 100%, ${35 + 45 * s.glow}%)`
-      : `hsl(${hue}, 40%, 26%)`;
+      : `hsl(${hue}, 40%, ${s.ledOff}%)`;
     ctx.beginPath();
     ctx.moveTo(-0.3 * g, -0.38 * g);
     ctx.lineTo(-0.3 * g, 0.38 * g);

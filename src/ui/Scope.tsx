@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { actions, runner, useStore } from '../store';
+import { actions, getState, runner, useStore } from '../store';
+import { THEMES, probeColor } from '../theme';
 import { formatSI, formatUnit } from '../util/si';
 
 const HEIGHT = 190;
@@ -37,6 +38,7 @@ export default function Scope() {
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, HEIGHT);
+      const theme = THEMES[getState().theme];
 
       const n = runner.scopeCount;
       const len = runner.scopeT.length;
@@ -44,7 +46,7 @@ export default function Scope() {
       const probes = runner.probes;
 
       // Grid.
-      ctx.strokeStyle = '#1b2740';
+      ctx.strokeStyle = theme.scopeGrid;
       ctx.lineWidth = 1;
       for (let i = 1; i < 4; i++) {
         const y = (HEIGHT * i) / 4;
@@ -77,7 +79,7 @@ export default function Scope() {
       const yOf = (v: number) => HEIGHT - ((v - lo) / (hi - lo)) * HEIGHT;
 
       if (lo < 0 && hi > 0) {
-        ctx.strokeStyle = '#2b3d61';
+        ctx.strokeStyle = theme.scopeZero;
         ctx.setLineDash([4, 4]);
         ctx.beginPath(); ctx.moveTo(0, yOf(0)); ctx.lineTo(w, yOf(0)); ctx.stroke();
         ctx.setLineDash([]);
@@ -85,7 +87,7 @@ export default function Scope() {
 
       for (let p = 0; p < probes.length; p++) {
         const buf = runner.scopeV[p];
-        ctx.strokeStyle = probes[p].color;
+        ctx.strokeStyle = probeColor(theme, p);
         ctx.lineWidth = 1.6;
         ctx.beginPath();
         for (let i = 0; i < n; i++) {
@@ -98,7 +100,7 @@ export default function Scope() {
       }
 
       // Vertical scale labels.
-      ctx.fillStyle = '#64748b';
+      ctx.fillStyle = theme.scopeLabel;
       ctx.font = '10px ui-monospace, SFMono-Regular, Menlo, monospace';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
@@ -137,7 +139,7 @@ export default function Scope() {
           <div className="legend">
             {runner.probes.map((p, i) => (
               <div key={p.id}>
-                <i style={{ background: p.color }} />
+                <i style={{ background: probeColor(THEMES[st.theme], i) }} />
                 {p.label}{' '}
                 <span>{formatUnit(values[i] ?? 0, p.kind === 'v' ? 'V' : 'A')}</span>
               </div>

@@ -3,6 +3,9 @@ import { COMPONENTS, defaultParams, type CompType } from './model/components';
 import { key, pinPositions, type Comp, type Schematic } from './model/schematic';
 import { SimRunner } from './sim/runner';
 import { EXAMPLES } from './examples';
+import {
+  applyTheme, initialTheme, storeTheme, storedTheme, themeFromUrl, type ThemeName,
+} from './theme';
 
 export type Tool = 'select' | 'wire' | 'probe';
 
@@ -27,6 +30,7 @@ export interface State {
   rev: number;
   /** Bumped to ask the canvas to re-centre on the circuit. */
   fitTick: number;
+  theme: ThemeName;
 }
 
 /** The solver lives outside React: it runs per animation frame, not per render. */
@@ -52,6 +56,7 @@ let state: State = {
   exampleId: null,
   rev: 0,
   fitTick: 0,
+  theme: initialTheme(),
 };
 
 const listeners = new Set<() => void>();
@@ -243,6 +248,10 @@ export const actions = {
 
   toggleRun() { set({ running: !state.running }); },
 
+  /** An explicit choice: applied at once and remembered for the next visit. */
+  setTheme(t: ThemeName) { applyTheme(t); storeTheme(t); set({ theme: t }); },
+  toggleTheme() { actions.setTheme(state.theme === 'dark' ? 'light' : 'dark'); },
+
   fitView() { set({ fitTick: state.fitTick + 1 }); },
 
   reset() { runner.reset(); emit(); },
@@ -339,9 +348,22 @@ function exampleFromUrl(): string | null {
  * examples on the host page changes only the fragment, which never reloads.
  */
 export function boot(): void {
+  applyTheme(state.theme);
+
   window.addEventListener('hashchange', () => {
     const id = exampleFromUrl();
     if (id && id !== state.exampleId) actions.loadExample(id);
+    // A URL theme is a per-view override, so it is applied but not remembered.
+    const t = themeFromUrl();
+    if (t && t !== state.theme) { applyTheme(t); set({ theme: t }); }
+  });
+
+  // With no explicit choice anywhere, keep following the OS setting live.
+  window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change', (e) => {
+    if (themeFromUrl() || storedTheme()) return;
+    const t: ThemeName = e.matches ? 'light' : 'dark';
+    applyTheme(t);
+    set({ theme: t });
   });
 
   const wanted = exampleFromUrl();

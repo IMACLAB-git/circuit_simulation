@@ -11,7 +11,41 @@
   --warn: #fbbf24;
   --danger: #f87171;
   --ok: #4ade80;
+  --on-accent: #06263a;
+  --hover-bg: #1e2e4d;
+  --hover-line: #2f4470;
+  --hint-bg: rgba(16, 26, 46, .9);
+  --error-bg: rgba(248, 113, 113, .14);
+  --error-line: rgba(248, 113, 113, .5);
+  --error-text: #fecaca;
+  --logo-text: #f8fafc;
+  --logo-red: #c00000;
   color-scheme: dark;
+}
+
+/* Canvas colours for the same two themes live in src/theme.ts. */
+:root[data-theme="light"] {
+  --bg: #eef2f7;
+  --panel: #ffffff;
+  --panel-2: #f1f5f9;
+  --line: #dbe2ea;
+  --text: #0f172a;
+  --muted: #475569;
+  --dim: #64748b;
+  --accent: #0284c7;
+  --accent-2: #db2777;
+  --warn: #b45309;
+  --danger: #dc2626;
+  --ok: #16a34a;
+  --on-accent: #ffffff;
+  --hover-bg: #e2e8f0;
+  --hover-line: #cbd5e1;
+  --hint-bg: rgba(255, 255, 255, .94);
+  --error-bg: rgba(220, 38, 38, .08);
+  --error-line: rgba(220, 38, 38, .45);
+  --error-text: #991b1b;
+  --logo-text: #000000;
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -37,9 +71,9 @@ button {
   cursor: pointer;
   transition: background .12s, border-color .12s, color .12s;
 }
-button:hover { background: #1e2e4d; border-color: #2f4470; }
+button:hover { background: var(--hover-bg); border-color: var(--hover-line); }
 button:active { transform: translateY(1px); }
-button.on { background: var(--accent); border-color: var(--accent); color: #06263a; font-weight: 600; }
+button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
 button.ghost { background: transparent; }
 button:disabled { opacity: .4; cursor: default; }
 
@@ -59,6 +93,23 @@ button:disabled { opacity: .4; cursor: default; }
   display: flex; align-items: center; gap: 8px;
 }
 .toolbar .brand span { color: var(--accent); }
+
+/* Lab mark: a red bar standing in for the "I", then the name in heavy type.
+   Rebuilt from type rather than the PNG so it follows the theme. The empty
+   inline-block sits on the text baseline, so the bar spans exactly the caps. */
+.lab-logo {
+  display: inline-flex; align-items: baseline; white-space: nowrap;
+  font: 700 21px/1 Calibri, Carlito, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: -.01em; color: var(--logo-text); text-decoration: none;
+  padding: 4px 7px; margin: -4px -1px -4px -7px; border-radius: 7px;
+  transition: background .12s;
+}
+.lab-logo .lab-i {
+  display: inline-block; width: .14em; height: .66em; margin-right: .1em;
+  background: var(--logo-red);
+}
+.lab-logo:hover { background: var(--panel-2); }
+.lab-logo:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .toolbar .sep { width: 1px; height: 22px; background: var(--line); margin: 0 2px; }
 .toolbar .spacer { flex: 1; }
 .toolbar select {
@@ -92,7 +143,7 @@ button:disabled { opacity: .4; cursor: default; }
   color: var(--muted); font-size: 13px;
 }
 .pal-item:hover { background: var(--panel-2); border-color: var(--line); color: var(--text); }
-.pal-item.on { background: var(--accent); border-color: var(--accent); color: #06263a; font-weight: 600; }
+.pal-item.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
 .pal-item canvas { flex: none; }
 
 .canvas-wrap { flex: 1; position: relative; min-width: 0; }
@@ -100,7 +151,7 @@ button:disabled { opacity: .4; cursor: default; }
 
 .hint {
   position: absolute; left: 12px; bottom: 12px;
-  background: rgba(16, 26, 46, .9); border: 1px solid var(--line);
+  background: var(--hint-bg); border: 1px solid var(--line);
   border-radius: 8px; padding: 7px 11px; font-size: 12px; color: var(--muted);
   pointer-events: none; max-width: 460px;
 }
@@ -108,8 +159,8 @@ button:disabled { opacity: .4; cursor: default; }
 
 .banner {
   position: absolute; left: 50%; top: 12px; transform: translateX(-50%);
-  background: rgba(248, 113, 113, .14); border: 1px solid rgba(248, 113, 113, .5);
-  color: #fecaca; border-radius: 8px; padding: 7px 13px; font-size: 13px;
+  background: var(--error-bg); border: 1px solid var(--error-line);
+  color: var(--error-text); border-radius: 8px; padding: 7px 13px; font-size: 13px;
 }
 
 .side {
@@ -185,6 +236,9 @@ button:disabled { opacity: .4; cursor: default; }
 }
 .status b { color: var(--muted); font-weight: 600; }
 .status .warn { color: var(--warn); }
+.status .credit { margin-left: auto; color: var(--dim); text-decoration: none; white-space: nowrap; }
+.status .credit b { color: var(--text); font-weight: 700; }
+.status .credit:hover, .status .credit:hover b { color: var(--accent); }
 
 kbd {
   background: var(--panel-2); border: 1px solid var(--line);

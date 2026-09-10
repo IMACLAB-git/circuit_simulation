@@ -9,12 +9,7 @@ export interface Probe {
   /** Grid point key for 'v', component id for 'i'. */
   target: string;
   label: string;
-  color: string;
 }
-
-export const PROBE_COLORS = [
-  '#38bdf8', '#f472b6', '#a3e635', '#fbbf24', '#c084fc', '#fb7185', '#2dd4bf', '#f97316',
-];
 
 const SCOPE_LEN = 1024;
 
@@ -154,9 +149,9 @@ export class SimRunner {
     if (at >= 0) { this.probes.splice(at, 1); }
     else {
       if (this.probes.length >= 8) this.probes.shift();
-      this.probes.push({ id, kind, target, label, color: PROBE_COLORS[this.probes.length % PROBE_COLORS.length] });
+      // Trace colours come from the theme, by position, at draw time.
+      this.probes.push({ id, kind, target, label });
     }
-    this.probes.forEach((p, i) => { p.color = PROBE_COLORS[i % PROBE_COLORS.length]; });
     this.allocScope();
   }
 
