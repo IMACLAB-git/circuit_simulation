@@ -13,6 +13,9 @@ export interface Probe {
 
 const SCOPE_LEN = 1024;
 
+/** Solver time allowed per animation frame, leaving the rest for painting. */
+const FRAME_BUDGET_MS = 8;
+
 /**
  * Animation dot speed in dot-spacings per second, for a branch current.
  *
@@ -255,8 +258,14 @@ export class SimRunner {
     if (this.running && !this.error) {
       const target = Math.min(realDt, 0.05) * this.timeScale;
       const steps = Math.min(Math.ceil(target / this.dt), this.maxStepsPerFrame);
-      this.lastSteps = steps;
+      // A step count alone is no budget: one hard switching instant can cost
+      // more than a thousand easy steps. Stop on wall-clock time as well, so
+      // no circuit can freeze the page; the simulation just falls a little
+      // behind real time for that frame.
+      const deadline = performance.now() + FRAME_BUDGET_MS;
+      let done = 0;
       for (let i = 0; i < steps; i++) {
+        if (i > 0 && performance.now() > deadline) break;
         if (!this.sim.step(this.dt)) {
           this.error = this.sim.n === 0
             ? null
@@ -264,7 +273,9 @@ export class SimRunner {
           break;
         }
         this.sample();
+        done = i + 1;
       }
+      this.lastSteps = done;
       this.distributeWireCurrents();
     }
     this.advancePhases(realDt);

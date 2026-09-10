@@ -64,10 +64,15 @@ const CJC = 5e-12;  // bipolar base-collector
 const CGS = 20e-12; // MOS gate-source
 const CGD = 5e-12;  // MOS gate-drain
 const CJD = 5e-12;  // diode / LED junction
-const MAX_ITER = 100;
+/**
+ * Newton iterations per attempt, kept short on purpose as in SPICE's ITL4. An
+ * attempt still unconverged after a few dozen passes is stuck rather than slow,
+ * and cutting the step gets there far sooner than grinding on.
+ */
+const MAX_ITER = 30;
 /** Newton iterations run undamped before under-relaxation kicks in. */
-const DAMP_AFTER = 12;
-const DAMP_HARD = 40;
+const DAMP_AFTER = 10;
+const DAMP_HARD = 20;
 /** How many times a failing step may be quartered before giving up. */
 const MAX_SUBDIVIDE = 5;
 
