@@ -36,6 +36,7 @@ function Icon({ type, active, theme }: { type: CompType; active: boolean; theme:
       params: defaultParams(type),
       glow: 0,
       ledOff: t.ledOff,
+      rot: 0,
     });
     ctx.restore();
   }, [type, active, theme]);

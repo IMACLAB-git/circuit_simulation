@@ -97,6 +97,12 @@ export function engineParams(c: Comp): Record<string, number> {
     case 'potentiometer':
       p.r = Math.max(c.params.rmax * c.params.pos, 0.01);
       break;
+    case 'voltmeter':
+      p.r = Math.max(c.params.rin, 1);
+      break;
+    case 'ammeter':
+      p.r = Math.max(c.params.rs, 1e-6);
+      break;
     case 'led': {
       // Pick a saturation current that puts the knee at the rated Vf.
       const n = 2;

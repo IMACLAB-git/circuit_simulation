@@ -12,7 +12,8 @@ export type CompType =
   | 'ground' | 'resistor' | 'capacitor' | 'inductor' | 'potentiometer'
   | 'battery' | 'vsine' | 'vpulse' | 'isource'
   | 'diode' | 'led' | 'npn' | 'pnp' | 'nmos' | 'pmos' | 'opamp'
-  | 'switch' | 'button';
+  | 'switch' | 'button'
+  | 'voltmeter' | 'ammeter';
 
 export type ParamKind = 'number' | 'bool' | 'select';
 
@@ -47,6 +48,8 @@ export interface CompDef {
   fixed?: Record<string, number>;
   /** Parameter shown next to the symbol on the canvas. */
   display?: string;
+  /** Live measurement shown next to the symbol in place of a parameter. */
+  readout?: 'v' | 'i';
   /** Clicking the body toggles this boolean parameter while running. */
   toggle?: string;
   /** Holding the mouse on the body drives `toggle` high, releasing it low. */
@@ -227,6 +230,30 @@ export const COMPONENTS: Record<CompType, CompDef> = {
     device: 'switch', toggle: 'closed', momentary: true,
     params: [{ key: 'closed', label: '눌림', unit: '', def: 0, kind: 'bool' }],
   },
+
+  // Meters are plain resistors to the solver: a big one reads voltage across
+  // itself, a tiny one reads the current through it. Real instruments work the
+  // same way, and a small resistance keeps the matrix solvable when a student
+  // puts the ammeter straight across a battery.
+  voltmeter: {
+    type: 'voltmeter', name: '전압계', desig: 'VM', category: 'io',
+    pins: H2, pinNames: ['+', '-'], box: BOX2,
+    device: 'resistor', readout: 'v',
+    params: [{
+      key: 'rin', label: '내부 저항', unit: 'Ω',
+      def: 1e9, min: 1e3, max: 1e12, log: true,
+    }],
+  },
+
+  ammeter: {
+    type: 'ammeter', name: '전류계', desig: 'AM', category: 'io',
+    pins: H2, pinNames: ['+', '-'], box: BOX2,
+    device: 'resistor', readout: 'i',
+    params: [{
+      key: 'rs', label: '내부 저항', unit: 'Ω',
+      def: 1e-3, min: 1e-6, max: 10, log: true,
+    }],
+  },
 };
 
 export const PALETTE_GROUPS: { title: string; items: CompType[] }[] = [
@@ -234,6 +261,7 @@ export const PALETTE_GROUPS: { title: string; items: CompType[] }[] = [
   { title: '전원', items: ['battery', 'vsine', 'vpulse', 'isource'] },
   { title: '반도체', items: ['diode', 'led', 'npn', 'pnp', 'nmos', 'pmos', 'opamp'] },
   { title: '입출력', items: ['switch', 'button'] },
+  { title: '계측기', items: ['voltmeter', 'ammeter'] },
 ];
 
 export function defaultParams(type: CompType): Record<string, number> {

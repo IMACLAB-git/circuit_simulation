@@ -168,6 +168,7 @@ function drawComp(ctx: CanvasRenderingContext2D, o: DrawOpts, c: Comp, dots: Pat
     params: c.params,
     glow: c.type === 'led' && !ghost ? runner.ledBrightness(c.id) : 0,
     ledOff: o.theme.ledOff,
+    rot: c.rot,
   };
   drawSymbol(ctx, c.type, sym);
   ctx.restore();
@@ -199,14 +200,18 @@ function drawLabels(ctx: CanvasRenderingContext2D, o: DrawOpts) {
   for (const c of o.sch.comps) {
     const def = COMPONENTS[c.type];
     if (def.type === 'ground') continue;
-    const value = def.display
-      ? (() => {
-        const spec = def.params.find((p) => p.key === def.display);
-        if (!spec) return null;
-        const v = def.type === 'potentiometer' ? c.params.rmax * c.params.pos : c.params[def.display];
-        return formatUnit(v, spec.unit);
-      })()
-      : null;
+    // A meter shows what it measures; everything else shows its own value.
+    const dev = o.runner.net?.deviceOf.get(c.id);
+    const value = def.readout
+      ? (dev ? formatUnit(def.readout === 'v' ? dev.volt : dev.cur, def.readout === 'v' ? 'V' : 'A') : '—')
+      : def.display
+        ? (() => {
+          const spec = def.params.find((p) => p.key === def.display);
+          if (!spec) return null;
+          const v = def.type === 'potentiometer' ? c.params.rmax * c.params.pos : c.params[def.display];
+          return formatUnit(v, spec.unit);
+        })()
+        : null;
 
     const [bx0, by0, bx1, by1] = compBounds(c);
     const vertical = c.rot % 2 === 1;

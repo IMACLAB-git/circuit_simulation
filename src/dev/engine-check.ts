@@ -50,6 +50,24 @@ const near = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol;
 
 /* ------------------------------------------------------------- unit circuits */
 
+function meterTest() {
+  console.log('전압계·전류계');
+  const sch = EXAMPLES.find((e) => e.id === 'meters')!.build();
+  const vmId = sch.comps.find((c) => c.type === 'voltmeter')!.id;
+  const amId = sch.comps.find((c) => c.type === 'ammeter')!.id;
+  const r = prepare(sch);
+  r.sim.solveDC();
+  const vm = r.sim.devices.find((d) => d.id === vmId)!;
+  const am = r.sim.devices.find((d) => d.id === amId)!;
+  // 10 V across 1k + 2k draws 3.333 mA and leaves 6.667 V across R2.
+  check('전류계 = 3.333 mA', near(am.cur, 1 / 300, 1e-6), `${(am.cur * 1e3).toFixed(4)} mA`);
+  check('전압계 = 6.667 V', near(vm.volt, 20 / 3, 1e-3), `${vm.volt.toFixed(4)} V`);
+  check('전압계 부하 오차 < 1 mV', Math.abs(vm.volt - 20 / 3) < 1e-3,
+    `${((vm.volt - 20 / 3) * 1e3).toExponential(2)} mV`);
+  check('전류계 부담 전압 < 1 mV', Math.abs(am.volt) < 1e-3,
+    `${(am.volt * 1e6).toFixed(2)} uV`);
+}
+
 function dividerTest() {
   console.log('저항 분압기');
   const sch: Schematic = {
@@ -312,6 +330,7 @@ function dcOperatingPointTest() {
 }
 
 dividerTest();
+meterTest();
 rcStepTest();
 diodeTest();
 bjtBiasTest();

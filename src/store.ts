@@ -138,7 +138,10 @@ export const actions = {
   setTool(tool: Tool) { set({ tool, placing: null }); },
 
   startPlacing(type: CompType | null) {
-    set({ placing: type, tool: 'select', selection: [] });
+    // Picking a part clears the selection; finishing a placement must not,
+    // or the part just dropped would be deselected the moment it appears and
+    // its values could not be edited without hunting for it again.
+    set({ placing: type, tool: 'select', selection: type ? [] : state.selection });
   },
 
   setPlacingRot(rot: number) { set({ placingRot: ((rot % 4) + 4) % 4 }); },

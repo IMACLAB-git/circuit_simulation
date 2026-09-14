@@ -170,6 +170,23 @@ const commonEmitter = (): Schematic => circuit(() => ({
   ],
 }));
 
+const meters = (): Schematic => circuit(() => ({
+  comps: [
+    c('battery', 2, 6, 1, { dc: 10 }),
+    c('ammeter', 5, 2, 0),
+    c('resistor', 9, 2, 0, { r: 1000 }),
+    c('resistor', 14, 2, 0, { r: 2000 }),
+    c('voltmeter', 14, 6, 0),
+    c('ground', 9, 9),
+  ],
+  wires: [
+    w(2, 5, 2, 2), w(2, 2, 4, 2), w(6, 2, 8, 2), w(10, 2, 13, 2),
+    w(15, 2, 17, 2), w(17, 2, 17, 9), w(17, 9, 2, 9), w(2, 7, 2, 9),
+    // The voltmeter hangs across R2, the ammeter sits in the loop itself.
+    w(13, 6, 13, 2), w(15, 6, 15, 2),
+  ],
+}));
+
 export const EXAMPLES: Example[] = [
   {
     id: 'led-blinker',
@@ -182,6 +199,14 @@ export const EXAMPLES: Example[] = [
       { kind: 'v', x: 9, y: 9, label: 'Q1 C' },
       { kind: 'v', x: 19, y: 9, label: 'Q2 C' },
     ],
+  },
+  {
+    id: 'meters',
+    name: '전압계·전류계 (옴의 법칙)',
+    note: '전류계는 회로에 직렬로, 전압계는 소자와 병렬로 달습니다. R2를 바꾸면 두 눈금이 함께 움직입니다.',
+    build: meters,
+    timeScale: 1,
+    timebase: 0.02,
   },
   {
     id: 'rc-lowpass',

@@ -21,6 +21,8 @@ export interface SymCtx {
   glow: number;
   /** HSL lightness for an unlit LED, so it reads as dark on either theme. */
   ledOff: number;
+  /** Quarter turns already applied to the canvas, so text can be unrotated. */
+  rot: number;
 }
 
 type Painter = (ctx: CanvasRenderingContext2D, s: SymCtx) => void;
@@ -298,6 +300,9 @@ const painters: Record<CompType, Painter> = {
     line(ctx, 0, y, 0, y - 0.3 * g);
     ctx.fillRect(-0.28 * g, y - 0.52 * g, 0.56 * g, 0.22 * g);
   },
+
+  voltmeter: (ctx, s) => meter(ctx, s, 'V'),
+  ammeter: (ctx, s) => meter(ctx, s, 'A'),
 };
 
 /** Bipolar transistor. Pin order: base, collector, emitter. */
@@ -375,6 +380,25 @@ function mos(ctx: CanvasRenderingContext2D, s: SymCtx, nch: boolean) {
   ctx.restore();
   line(ctx, -0.02 * g, 0, 0.5 * g, 0);
   line(ctx, 0.5 * g, 0, 0.5 * g, -0.45 * g);
+}
+
+/** Meter: a circle with its quantity letter, kept upright at any rotation. */
+function meter(ctx: CanvasRenderingContext2D, s: SymCtx, letter: string) {
+  const g = s.g;
+  lead(ctx, s, 0, -1, 0, -0.55, 0);
+  lead(ctx, s, 1, 0.55, 0, 1, 0);
+  ctx.strokeStyle = s.body;
+  ctx.beginPath();
+  ctx.arc(0, 0, 0.55 * g, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.save();
+  ctx.rotate((-s.rot * Math.PI) / 2);
+  ctx.fillStyle = s.body;
+  ctx.font = `700 ${(0.7 * g).toFixed(1)}px ui-sans-serif, system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(letter, 0, 0.04 * g);
+  ctx.restore();
 }
 
 export function drawSymbol(ctx: CanvasRenderingContext2D, type: CompType, s: SymCtx): void {
