@@ -71,6 +71,71 @@ export function dragSelection(
   };
 }
 
+/**
+ * Turns the selection a quarter turn clockwise.
+ *
+ * A lone part spins about its own origin and stays put, which is what pressing
+ * R on one component should do. Any wider selection turns as a block about the
+ * middle of everything selected, so selected wires swing round with the parts.
+ *
+ * Either way, wire ends resting on a pin are carried to wherever that pin ends
+ * up, so rotating a part bends its wiring instead of tearing it off.
+ */
+export function rotateSelection(sch: Schematic, selection: Set<string>): Schematic {
+  const comps = sch.comps.filter((c) => selection.has(c.id));
+  const wires = sch.wires.filter((w) => selection.has(w.id));
+  if (comps.length === 0 && wires.length === 0) return sch;
+
+  let px: number;
+  let py: number;
+  if (comps.length === 1 && wires.length === 0) {
+    px = comps[0].x;
+    py = comps[0].y;
+  } else {
+    const pts: [number, number][] = [
+      ...comps.map((c) => [c.x, c.y] as [number, number]),
+      ...wires.flatMap((w) => [[w.x1, w.y1], [w.x2, w.y2]] as [number, number][]),
+    ];
+    px = Math.round(pts.reduce((t, p) => t + p[0], 0) / pts.length);
+    py = Math.round(pts.reduce((t, p) => t + p[1], 0) / pts.length);
+  }
+  const spin = (x: number, y: number): [number, number] => {
+    const [dx, dy] = rotate(x - px, y - py, 1);
+    return [px + dx, py + dy];
+  };
+
+  const newComps = sch.comps.map((c) => {
+    if (!selection.has(c.id)) return { ...c, params: { ...c.params } };
+    const [x, y] = spin(c.x, c.y);
+    return { ...c, x, y, rot: (c.rot + 1) % 4, params: { ...c.params } };
+  });
+
+  // Where each pin of a turned part used to be, and where it is now.
+  const moved = new Map<string, [number, number]>();
+  for (const c of comps) {
+    const after = pinPositions(newComps.find((n) => n.id === c.id)!);
+    pinPositions(c).forEach(([x, y], i) => moved.set(key(x, y), after[i]));
+  }
+
+  return {
+    comps: newComps,
+    wires: sch.wires.map((w) => {
+      if (selection.has(w.id)) {
+        const [x1, y1] = spin(w.x1, w.y1);
+        const [x2, y2] = spin(w.x2, w.y2);
+        return { ...w, x1, y1, x2, y2 };
+      }
+      const a = moved.get(key(w.x1, w.y1));
+      const b = moved.get(key(w.x2, w.y2));
+      return {
+        ...w,
+        x1: a ? a[0] : w.x1, y1: a ? a[1] : w.y1,
+        x2: b ? b[0] : w.x2, y2: b ? b[1] : w.y2,
+      };
+    }),
+  };
+}
+
 /** True if (px,py) lies on the closed segment (x1,y1)-(x2,y2). */
 function onSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): boolean {
   const cross = (px - x1) * (y2 - y1) - (py - y1) * (x2 - x1);

@@ -7,7 +7,7 @@
  * animation.
  */
 import {
-  buildNetlist, dragSelection, key, pinPositions, type Schematic,
+  buildNetlist, dragSelection, key, pinPositions, rotateSelection, type Schematic,
 } from '../model/schematic';
 import { Simulator } from '../engine/simulator';
 import { EXAMPLES } from '../examples';
@@ -106,6 +106,46 @@ function dragTest() {
   check('노드 수 그대로', netA.nNodes === netB.nNodes, `${netA.nNodes} -> ${netB.nNodes}`);
   check('전류계 눈금 그대로', near(iAfter, iBefore, 1e-12),
     `${(iBefore * 1e3).toFixed(4)} -> ${(iAfter * 1e3).toFixed(4)} mA`);
+}
+
+function rotateTest() {
+  console.log('소자 회전: 배선 따라오기');
+  const sch = EXAMPLES.find((e) => e.id === 'meters')!.build();
+  const amId = sch.comps.find((c) => c.type === 'ammeter')!.id;
+  const before = prepare(sch);
+  before.sim.solveDC();
+  const iBefore = before.sim.devices.find((d) => d.id === amId)!.cur;
+
+  // One part alone: spins in place, its wires bend to the new pin positions.
+  const r1 = sch.comps.find((c) => c.name === 'R1')!;
+  const turned = rotateSelection(sch, new Set([r1.id]));
+  const tr1 = turned.comps.find((c) => c.id === r1.id)!;
+  const ends = new Set(turned.wires.flatMap((w) => [key(w.x1, w.y1), key(w.x2, w.y2)]));
+  const after = prepare(turned);
+  after.sim.solveDC();
+  const iAfter = after.sim.devices.find((d) => d.id === amId)!.cur;
+
+  check('제자리에서 90도 돌았다', tr1.x === r1.x && tr1.y === r1.y && tr1.rot === (r1.rot + 1) % 4,
+    `(${tr1.x},${tr1.y}) rot ${r1.rot} -> ${tr1.rot}`);
+  check('배선 끝이 새 핀 자리로', pinPositions(tr1).every(([x, y]) => ends.has(key(x, y))),
+    pinPositions(tr1).map((p) => p.join(',')).join(' / '));
+  check('노드 수 그대로', buildNetlist(sch).nNodes === buildNetlist(turned).nNodes,
+    `${buildNetlist(sch).nNodes} -> ${buildNetlist(turned).nNodes}`);
+  check('전류계 눈금 그대로', near(iAfter, iBefore, 1e-12),
+    `${(iBefore * 1e3).toFixed(4)} -> ${(iAfter * 1e3).toFixed(4)} mA`);
+
+  // A part plus a wire: the pair turns together about the middle of the two.
+  const wire = sch.wires.find((w) => w.x1 === 6 && w.y1 === 2 && w.x2 === 8 && w.y2 === 2)!;
+  const block = rotateSelection(sch, new Set([r1.id, wire.id]));
+  const bw = block.wires.find((w) => w.id === wire.id)!;
+  const br1 = block.comps.find((c) => c.id === r1.id)!;
+  // Pivot is the rounded mean of (9,2), (6,2) and (8,2) -> (8,2).
+  const spun = (x: number, y: number) => [8 - (y - 2), 2 + (x - 8)];
+  const okWire = bw.x1 === spun(6, 2)[0] && bw.y1 === spun(6, 2)[1]
+    && bw.x2 === spun(8, 2)[0] && bw.y2 === spun(8, 2)[1];
+  check('선택한 배선도 함께 돌았다', okWire, `(${bw.x1},${bw.y1})-(${bw.x2},${bw.y2})`);
+  check('소자도 같은 축으로 돌았다', br1.x === spun(9, 2)[0] && br1.y === spun(9, 2)[1],
+    `(${br1.x},${br1.y})`);
 }
 
 function dividerTest() {
@@ -372,6 +412,7 @@ function dcOperatingPointTest() {
 dividerTest();
 meterTest();
 dragTest();
+rotateTest();
 rcStepTest();
 diodeTest();
 bjtBiasTest();

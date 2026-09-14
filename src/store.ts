@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { COMPONENTS, defaultParams, type CompType } from './model/components';
 import {
-  dragSelection, key, pinPositions, type Comp, type Schematic,
+  dragSelection, key, pinPositions, rotateSelection, type Comp, type Schematic,
 } from './model/schematic';
 import { SimRunner } from './sim/runner';
 import { EXAMPLES } from './examples';
@@ -173,10 +173,8 @@ export const actions = {
   },
 
   rotateSelection() {
-    const sel = new Set(state.selection);
-    const sch = clone(state.sch);
-    for (const c of sch.comps) if (sel.has(c.id)) c.rot = (c.rot + 1) % 4;
-    edit(sch);
+    if (state.selection.length === 0) return;
+    edit(rotateSelection(state.sch, new Set(state.selection)));
   },
 
   deleteSelection() {
