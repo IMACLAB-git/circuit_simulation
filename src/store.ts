@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import { COMPONENTS, defaultParams, type CompType } from './model/components';
-import { key, pinPositions, type Comp, type Schematic } from './model/schematic';
+import {
+  dragSelection, key, pinPositions, type Comp, type Schematic,
+} from './model/schematic';
 import { SimRunner } from './sim/runner';
 import { EXAMPLES } from './examples';
 import {
@@ -167,14 +169,7 @@ export const actions = {
 
   moveSelection(dx: number, dy: number) {
     if (dx === 0 && dy === 0) return;
-    const sel = new Set(state.selection);
-    const sch = clone(state.sch);
-    for (const c of sch.comps) if (sel.has(c.id)) { c.x += dx; c.y += dy; }
-    for (const w of sch.wires) {
-      if (!sel.has(w.id)) continue;
-      w.x1 += dx; w.y1 += dy; w.x2 += dx; w.y2 += dy;
-    }
-    edit(sch);
+    edit(dragSelection(state.sch, new Set(state.selection), dx, dy));
   },
 
   rotateSelection() {

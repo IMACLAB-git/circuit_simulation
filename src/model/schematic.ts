@@ -35,6 +35,42 @@ export function pinPositions(c: Comp): [number, number][] {
   });
 }
 
+/**
+ * Moves the selected parts by (dx, dy), dragging along the end of any wire
+ * that sits on a pin being moved.
+ *
+ * Without this a part tears free of its wiring the moment it is dragged, since
+ * connectivity is decided by shared grid points. Only wire *endpoints*
+ * rubber-band: a wire that merely passes through a pin mid-segment keeps its
+ * shape, which is what a schematic editor is expected to do.
+ */
+export function dragSelection(
+  sch: Schematic, selection: Set<string>, dx: number, dy: number,
+): Schematic {
+  const anchors = new Set<string>();
+  for (const c of sch.comps) {
+    if (!selection.has(c.id)) continue;
+    for (const [x, y] of pinPositions(c)) anchors.add(key(x, y));
+  }
+  return {
+    comps: sch.comps.map((c) => (selection.has(c.id)
+      ? { ...c, x: c.x + dx, y: c.y + dy, params: { ...c.params } }
+      : { ...c, params: { ...c.params } })),
+    wires: sch.wires.map((w) => {
+      if (selection.has(w.id)) {
+        return { ...w, x1: w.x1 + dx, y1: w.y1 + dy, x2: w.x2 + dx, y2: w.y2 + dy };
+      }
+      const a = anchors.has(key(w.x1, w.y1));
+      const b = anchors.has(key(w.x2, w.y2));
+      return {
+        ...w,
+        x1: a ? w.x1 + dx : w.x1, y1: a ? w.y1 + dy : w.y1,
+        x2: b ? w.x2 + dx : w.x2, y2: b ? w.y2 + dy : w.y2,
+      };
+    }),
+  };
+}
+
 /** True if (px,py) lies on the closed segment (x1,y1)-(x2,y2). */
 function onSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): boolean {
   const cross = (px - x1) * (y2 - y1) - (py - y1) * (x2 - x1);

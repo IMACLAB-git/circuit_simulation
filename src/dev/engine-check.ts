@@ -6,7 +6,9 @@
  * so a regression in a device stamp shows up as a number, not as a wrong-looking
  * animation.
  */
-import { buildNetlist, key, type Schematic } from '../model/schematic';
+import {
+  buildNetlist, dragSelection, key, pinPositions, type Schematic,
+} from '../model/schematic';
 import { Simulator } from '../engine/simulator';
 import { EXAMPLES } from '../examples';
 
@@ -66,6 +68,44 @@ function meterTest() {
     `${((vm.volt - 20 / 3) * 1e3).toExponential(2)} mV`);
   check('전류계 부담 전압 < 1 mV', Math.abs(am.volt) < 1e-3,
     `${(am.volt * 1e6).toFixed(2)} uV`);
+}
+
+function dragTest() {
+  console.log('소자 드래그: 배선 따라오기');
+  const sch = EXAMPLES.find((e) => e.id === 'meters')!.build();
+  const amId = sch.comps.find((c) => c.type === 'ammeter')!.id;
+  const before = prepare(sch);
+  before.sim.solveDC();
+  const iBefore = before.sim.devices.find((d) => d.id === amId)!.cur;
+
+  // Drag R1 three cells down: its two wires should stretch, not detach.
+  const r1 = sch.comps.find((c) => c.name === 'R1')!;
+  const pins = pinPositions(r1).map(([x, y]) => key(x, y));
+  const moved = dragSelection(sch, new Set([r1.id]), 0, 3);
+  const after = prepare(moved);
+  after.sim.solveDC();
+  const iAfter = after.sim.devices.find((d) => d.id === amId)!.cur;
+
+  const movedR1 = moved.comps.find((c) => c.id === r1.id)!;
+  const ends = new Set(moved.wires.flatMap((w) => [key(w.x1, w.y1), key(w.x2, w.y2)]));
+  const attached = pinPositions(movedR1).every(([x, y]) => ends.has(key(x, y)));
+  const netA = buildNetlist(sch);
+  const netB = buildNetlist(moved);
+
+  // Wires with no end on a moved pin must not have shifted at all.
+  const othersHeld = moved.wires.every((w, i) => {
+    const o = sch.wires[i];
+    if (pins.includes(key(o.x1, o.y1)) || pins.includes(key(o.x2, o.y2))) return true;
+    return w.x1 === o.x1 && w.y1 === o.y1 && w.x2 === o.x2 && w.y2 === o.y2;
+  });
+
+  check('R1이 이동했다', movedR1.y === r1.y + 3, `y ${r1.y} -> ${movedR1.y}`);
+  check('배선 끝이 핀을 따라왔다', attached,
+    pinPositions(movedR1).map((p) => p.join(',')).join(' / '));
+  check('붙지 않은 배선은 그대로', othersHeld, `${moved.wires.length}개 검사`);
+  check('노드 수 그대로', netA.nNodes === netB.nNodes, `${netA.nNodes} -> ${netB.nNodes}`);
+  check('전류계 눈금 그대로', near(iAfter, iBefore, 1e-12),
+    `${(iBefore * 1e3).toFixed(4)} -> ${(iAfter * 1e3).toFixed(4)} mA`);
 }
 
 function dividerTest() {
@@ -331,6 +371,7 @@ function dcOperatingPointTest() {
 
 dividerTest();
 meterTest();
+dragTest();
 rcStepTest();
 diodeTest();
 bjtBiasTest();
